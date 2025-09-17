@@ -1,1 +1,1 @@
-# Ctrl-Intelligence
+# Ctrl+Intelligence
