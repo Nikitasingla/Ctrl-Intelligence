@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Chatbot</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px 0;
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    #chat-box {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 15px;
+      width: 400px;
+      height: 450px;
+      overflow-y: auto;
+      background-color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .user, .assistant {
+      margin: 8px 0;
+      padding: 8px 12px;
+      border-radius: 12px;
+      max-width: 80%;
+      word-wrap: break-word;
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    .user {
+      background-color: #e0f3ff;
+      color: #0366d6;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+
+    .assistant {
+      background-color: #f0f9f4;
+      color: #22863a;
+      align-self: flex-start;
+      margin-right: auto;
+    }
+
+    #input-container {
+      display: flex;
+      width: 400px;
+      margin-top: 15px;
+      gap: 10px;
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 10px 15px;
+      border-radius: 25px;
+      border: 1px solid #ccc;
+      outline: none;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    #user-input:focus {
+      border-color: #0366d6;
+      box-shadow: 0 0 5px rgba(3,102,214,0.3);
+    }
+
+    button {
+      padding: 0 15px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    button:first-of-type {
+      background-color: #0366d6;
+      color: white;
+    }
+
+    button:last-of-type {
+      background-color: #28a745;
+      color: white;
+    }
+    /* Floating Icon */
+#chat-icon {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 1000;
+  transition: transform 0.2s;
+}
+#chat-icon:hover {
+  transform: scale(1.1);
+}
+
+/* Chat Panel */
+#chat-panel {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  width: 400px;
+  height: 500px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  display: none; /* hidden initially */
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+/* Panel Header */
+#chat-panel .panel-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Close Button */
+#chat-panel #close-chat {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Panel Body */
+#chat-panel .panel-body {
+  padding: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#chat-box {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 10px;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+  margin-bottom: 10px;
+}
+
+#input-container {
+  display: flex;
+  gap: 10px;
+}
+
+#user-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 25px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+
+button {
+  padding: 0 12px;
+  border-radius: 25px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+button:first-of-type {
+  background-color: #0366d6;
+  color: white;
+}
+
+button:last-of-type {
+  background-color: #28a745;
+  color: white;
+}
+
+  </style>
+</head>
+<body>
+  <body>
+  <!-- Floating Chat Icon -->
+  <div id="chat-icon">
+    <i class="fas fa-robot"></i>
+  </div>
+
+  <!-- Chat Panel -->
+  <div id="chat-panel">
+    <div class="panel-header">
+      <span>Chat with AI </span>
+      <button id="close-chat">&times;</button>
+    </div>
+    <div class="panel-body">
+      <div id="chat-box"></div>
+      <div id="input-container">
+        <input type="text" id="user-input" placeholder="Type your message..." />
+        <button onclick="sendMessage()">Send</button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- FontAwesome for the icon -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+
+   <script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    async function sendMessage() {
+      const inputField = document.getElementById("user-input");
+      const userMessage = inputField.value.trim();
+      if (!userMessage) return;
+
+      appendMessage("user", userMessage);
+      inputField.value = "";
+
+      try {
+        const csrftoken = getCookie('csrftoken');
+        const response = await fetch("/api/chat/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken,
+          },
+          body: JSON.stringify({ message: userMessage }),
+        });
+
+        if (!response.ok) {
+                 throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.answer) {
+          appendMessage("assistant", data.answer);
+        } else {
+          appendMessage("assistant", "⚠ No reply from server.");
+        }
+      } catch (err) {
+        console.error("Error:", err);
+        appendMessage("assistant", "⚠ Request failed.");
+      }
+    }
+
+    function appendMessage(role, text) {
+      const chatBox = document.getElementById("chat-box");
+      const messageDiv = document.createElement("div");
+      messageDiv.className = role;
+      messageDiv.textContent = (role === "user" ? "You: " : "AI: ") + text;
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // ✅ Voice recognition
+    let recognition;
+    let isRecording = false;
+
+    function toggleRecording() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Speech Recognition not supported in this browser.");
+        return;
+      }
+
+      if (!isRecording) {
+        recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+
+        recognition.onstart = () => console.log("🎙 Listening...");
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          console.log("Transcript:", transcript);
+          document.getElementById("user-input").value = transcript;
+          sendMessage();
+        };
+        recognition.onerror = (event) => console.error("Error:", event.error);
+        recognition.onend = () => {
+          console.log("🛑 Stopped listening");
+          isRecording = false;
+        };
+
+        recognition.start();
+        isRecording = true;
+      } else {
+        recognition.stop();
+        isRecording = false;
+      }
+    }
+  </script>
+
+  <script>
+const chatIcon = document.getElementById('chat-icon');
+const chatPanel = document.getElementById('chat-panel');
+const closeChat = document.getElementById('close-chat');
+
+chatIcon.addEventListener('click', () => {
+  chatPanel.style.display = 'flex';
+});
+
+closeChat.addEventListener('click', () => {
+  chatPanel.style.display = 'none';
+});
+</script>
+
+</body>
+</html>

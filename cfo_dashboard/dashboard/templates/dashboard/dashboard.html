@@ -1,0 +1,350 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Financial Dashboard - AI CFO Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    {% if sample_mode %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        <strong>Sample Dashboard:</strong> This dashboard shows data from Zomato's Annual Report 2023-24
+    </div>
+    {% endif %}
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6">
+                <i class="fas fa-chart-line text-primary"></i>
+                Financial Health Dashboard
+            </h1>
+            {% if not sample_mode %}
+            <p class="text-muted">Analysis for: {{ document.original_filename }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    {% if historical_data %}
+    <div class="row mb-4">
+        {% with latest=historical_data|last %}
+        <div class="col-md-4">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Revenue ({{ latest.year }})</h5>
+                    <h2 class="display-6">₹{{ latest.revenue_crore|floatformat:0 }} Cr</h2>
+                    {% if historical_data|length > 1 %}
+                        {% with previous=historical_data|slice:"-2:-1"|first %}
+                        <small>
+                            {% widthratio latest.revenue_crore previous.revenue_crore 100 as growth_rate %}
+                            {% if growth_rate > 100 %}
+                                <i class="fas fa-arrow-up text-success"></i>
+                                +{{ growth_rate|add:"-100" }}% YoY
+                            {% else %}
+                                <i class="fas fa-arrow-down text-danger"></i>
+                                {{ growth_rate|add:"-100" }}% YoY
+                            {% endif %}
+                        </small>
+                        {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Profit After Tax ({{ latest.year }})</h5>
+                    <h2 class="display-6">₹{{ latest.profit_crore|floatformat:0 }} Cr</h2>
+                    {% if historical_data|length > 1 %}
+                        {% with previous=historical_data|slice:"-2:-1"|first %}
+                        <small>
+                            {% if latest.profit_crore > previous.profit_crore %}
+                                <i class="fas fa-arrow-up text-success"></i>
+                                Improved YoY
+                            {% else %}
+                                <i class="fas fa-arrow-down text-danger"></i>
+                                Declined YoY
+                            {% endif %}
+                        </small>
+                        {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Net Profit Margin ({{ latest.year }})</h5>
+                    {% if latest.revenue_crore > 0 %}
+                        {% widthratio latest.profit_crore latest.revenue_crore 100 as margin %}
+                        <h2 class="display-6">{{ margin|floatformat:1 }}%</h2>
+                    {% else %}
+                        <h2 class="display-6">N/A</h2>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+    </div>
+    {% endif %}
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Revenue Breakdown -->
+        {% if revenue_breakdown %}
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Revenue Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        {{ charts.breakdown|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+        {% else %}
+        <div class="col-md-12">
+        {% endif %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Historical Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        {{ charts.historical|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forecast Section -->
+    {% if forecast_data %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-crystal-ball"></i> 
+                        3-Year Financial Forecast
+                        <span class="badge forecast-badge ms-2">AI Generated</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Disclaimer:</strong> These forecasts are generated using simple linear regression and should be used for reference only.
+                    </div>
+                    <div class="chart-container">
+                        <div id="forecast-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Competitor Analysis -->
+    {% if has_competitor_data %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> 
+                        Competitive Analysis vs {{ financial_data.competitor_data.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                {{ charts.competitor_revenue|safe }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                {{ charts.competitor_profit|safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Risks and Opportunities -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle text-danger"></i> Key Risks</h5>
+                </div>
+                <div class="card-body">
+                    {% if risks %}
+                        {% for risk in risks %}
+                        <div class="risk-item p-3 mb-3 rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>🚨 {{ risk }}</strong>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="getRiskExplanation('{{ risk }}', {{ forloop.counter0 }})">
+                                    Details
+                                </button>
+                            </div>
+                            <div id="risk-explanation-{{ forloop.counter0 }}" class="mt-2 d-none">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No specific risks identified in the document.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb text-success"></i> Key Opportunities</h5>
+                </div>
+                <div class="card-body">
+                    {% if opportunities %}
+                        {% for opportunity in opportunities %}
+                        <div class="opportunity-item p-3 mb-3 rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>💡 {{ opportunity }}</strong>
+                                <button class="btn btn-sm btn-outline-success" 
+                                        onclick="getOpportunityExplanation('{{ opportunity }}', {{ forloop.counter0 }})">
+                                    Details
+                                </button>
+                            </div>
+                            <div id="opportunity-explanation-{{ forloop.counter0 }}" class="mt-2 d-none">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No specific opportunities identified in the document.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Data Section -->
+    {% if not sample_mode %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link p-0" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#rawData">
+                            <i class="fas fa-code"></i> View Raw Extracted JSON Data
+                        </button>
+                    </h5>
+                </div>
+                <div class="collapse" id="rawData">
+                    <div class="card-body">
+                        <pre class="bg-light p-3 rounded"><code>{{ financial_data.extracted_data|pprint }}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+// Generate forecast chart
+{% if forecast_data %}
+const forecastData = {{ forecast_data|safe }};
+
+// Prepare data for Plotly
+const traces = [];
+const metrics = [...new Set(forecastData.map(d => d.metric))];
+const types = [...new Set(forecastData.map(d => d.type))];
+
+metrics.forEach(metric => {
+    types.forEach(type => {
+        const data = forecastData.filter(d => d.metric === metric && d.type === type);
+        if (data.length > 0) {
+            traces.push({
+                x: data.map(d => d.year),
+                y: data.map(d => d.value),
+                name: `${metric} (${type.charAt(0).toUpperCase() + type.slice(1)})`,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: {
+                    dash: type === 'forecast' ? 'dash' : 'solid'
+                }
+            });
+        }
+    });
+});
+
+const layout = {
+    title: 'Historical Data & Future Projections',
+    xaxis: { title: 'Year' },
+    yaxis: { title: 'Amount (₹ Crore)' },
+    hovermode: 'x unified'
+};
+
+Plotly.newPlot('forecast-chart', traces, layout);
+{% endif %}
+
+// Risk explanation function
+function getRiskExplanation(riskTopic, index) {
+    const explanationDiv = document.getElementById(`risk-explanation-${index}`);
+    explanationDiv.classList.remove('d-none');
+    
+    $.ajax({
+        url: "{% url 'dashboard:risk_explanation' %}",
+        type: 'POST',
+        data: {
+            'risk_topic': riskTopic,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            explanationDiv.innerHTML = `<div class="alert alert-light"><small>${response.explanation}</small></div>`;
+        },
+        error: function() {
+            explanationDiv.innerHTML = `<div class="alert alert-danger"><small>Failed to load explanation.</small></div>`;
+        }
+    });
+}
+
+// Opportunity explanation function
+function getOpportunityExplanation(opportunityTopic, index) {
+    const explanationDiv = document.getElementById(`opportunity-explanation-${index}`);
+    explanationDiv.classList.remove('d-none');
+    
+    $.ajax({
+        url: "{% url 'dashboard:opportunity_explanation' %}",
+        type: 'POST',
+        data: {
+            'opportunity_topic': opportunityTopic,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            explanationDiv.innerHTML = `<div class="alert alert-light"><small>${response.explanation}</small></div>`;
+        },
+        error: function() {
+            explanationDiv.innerHTML = `<div class="alert alert-danger"><small>Failed to load explanation.</small></div>`;
+        }
+    });
+}
+</script>
+{% endblock %}

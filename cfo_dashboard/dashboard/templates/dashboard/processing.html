@@ -1,0 +1,110 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Processing Document - AI CFO Dashboard{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="processing-spinner spinner-border text-primary mb-4" role="status">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                    
+                    <h3>Processing Your Document</h3>
+                    <p class="text-muted mb-4">AI is analyzing your financial data...</p>
+                    
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             id="progressBar"
+                             style="width: {{job.progress}}%">
+                            <span id="progressText">{{ job.progress }}%</span>
+                        </div>
+                    </div>
+                    
+                    <div id="statusMessage" class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <span id="statusText">
+                            {% if job.status == 'pending' %}
+                                Waiting to start processing...
+                            {% elif job.status == 'processing' %}
+                                Processing document and extracting financial data...
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div id="errorMessage" class="alert alert-danger d-none">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="errorText"></span>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <small class="text-muted">
+                            This process may take a few minutes depending on document size.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}  <script>
+let checkInterval;
+
+function checkProcessingStatus() {
+    $.ajax({
+        url: window.location.href,
+        type: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(data) {
+            // Update progress bar
+            $('#progressBar').css('width', data.progress + '%');
+            $('#progressText').text(data.progress + '%');
+            
+            // Update status
+            if (data.status === 'processing') {
+                $('#statusText').text('Processing document and extracting financial data...');
+            } else if (data.status === 'completed') {
+                $('#statusText').text('Processing completed successfully!');
+                $('#statusMessage').removeClass('alert-info').addClass('alert-success');
+                $('.processing-spinner').hide();
+                clearInterval(checkInterval);
+                
+                // Redirect to dashboard
+                setTimeout(function() {
+                    window.location.href = "{% url 'dashboard:dashboard_view' document_id=job.document.id %}";
+                }, 2000);
+                
+            } else if (data.status === 'failed') {
+                $('#statusMessage').addClass('d-none');
+                $('#errorMessage').removeClass('d-none');
+                $('#errorText').text(data.error || 'Processing failed. Please try again.');
+                $('.processing-spinner').hide();
+                clearInterval(checkInterval);
+            }
+        },
+        error: function() {
+            $('#statusMessage').addClass('d-none');
+            $('#errorMessage').removeClass('d-none');
+            $('#errorText').text('Error checking processing status. Please refresh the page.');
+            clearInterval(checkInterval);
+        }
+    });
+}
+
+$(document).ready(function() {
+    // Check status every 3 seconds
+    checkInterval = setInterval(checkProcessingStatus, 3000);
+    
+    // Initial check
+    checkProcessingStatus();
+});
+</script>
+{% endblock %}

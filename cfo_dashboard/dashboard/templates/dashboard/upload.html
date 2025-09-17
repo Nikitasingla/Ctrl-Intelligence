@@ -1,0 +1,217 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Upload Document - AI CFO Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #0a0f0a;
+        background-image: radial-gradient(at left center, rgba(2, 1, 1, 0) 60%, rgb(10, 46, 30) 100%);
+        color: #eaeaea;
+        font-family: 'Inter', sans-serif;
+    }
+    .hero-section {
+        padding: 2.5rem 0;
+        background: #141414;
+        border-radius: 1rem;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .card {
+        background: #1a1a1a;
+        border: 1px solid #262626;
+        border-radius: 1rem;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+        color: #dcdcdc;
+    }
+    .card-header {
+        background: #1f1f1f;
+        color: #fff;
+        border-radius: 1rem 1rem 0 0;
+        border-bottom: 1px solid #2a2a2a;
+    }
+    .btn-primary {
+        background: #16a34a;
+        border: none;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        transition: 0.3s;
+    }
+    .btn-primary:hover {
+        background: #15803d;
+    }
+    .btn-success {
+        background: #22c55e;
+        border: none;
+        border-radius: 0.75rem;
+        transition: 0.3s;
+    }
+    .btn-success:hover {
+        background: #16a34a;
+    }
+    .btn-outline-primary {
+        border: 2px solid #22c55e;
+        border-radius: 0.75rem;
+        color: #22c55e;
+        background: transparent;
+    }
+    .btn-outline-primary:hover {
+        background: #22c55e;
+        color: #fff;
+    }
+    .form-label {
+        color: #cfd8dc;
+        font-weight: 500;
+    }
+    .card-body h5 {
+        color: #22c55e;
+    }
+    .card-body p.text-muted {
+        color: #9ca3af !important;
+    }
+    .icon-green {
+        color: #22c55e;
+    }
+    .icon-warning {
+        color: #facc15;
+    }
+</style>
+
+<div class="hero-section text-center">
+    <div class="container">
+        <h1 class="display-4">🤖 AI CFO Forecasting Dashboard</h1>
+        <p class="lead text-gray-400">Generate visual financial trends, forecasts, and risk analysis from your documents</p>
+    </div>
+</div>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-upload"></i> Choose Your Data Source
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-file-alt fa-3x icon-green mb-3"></i>
+                                    <h5>Sample Dashboard</h5>
+                                    <p class="text-muted">View a pre-built dashboard with Zomato's annual report data</p>
+                                    <a href="{% url 'dashboard:sample_dashboard' %}" class="btn btn-outline-primary">
+                                        View Sample Dashboard
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-cloud-upload-alt fa-3x icon-green mb-3"></i>
+                                    <h5>Upload Your Document</h5>
+                                    <p class="text-muted">Upload PDF, CSV, or Excel files for analysis</p>
+                                    <button class="btn btn-success" data-bs-toggle="collapse" data-bs-target="#uploadForm">
+                                        Upload New File
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="collapse" id="uploadForm">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Upload Document for Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="post" enctype="multipart/form-data" id="documentUploadForm">
+                                    {% csrf_token %}
+                                    
+                                    <div class="mb-3">
+                                        <label for="{{ form.file.id_for_label }}" class="form-label">
+                                            <i class="fas fa-file"></i> Select Document
+                                        </label>
+                                        {{ form.file }}
+                                        <div class="form-text text-muted">
+                                            Supported formats: PDF, CSV, Excel (.xlsx, .xls). Maximum size: 50MB
+                                        </div>
+                                        {% if form.file.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.file.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="{{ form.competitor_ticker.id_for_label }}" class="form-label">
+                                            <i class="fas fa-chart-line"></i> Competitor Analysis (Optional)
+                                        </label>
+                                        {{ form.competitor_ticker }}
+                                        <div class="form-text text-muted">
+                                            {{ form.competitor_ticker.help_text }}
+                                        </div>
+                                    </div>
+
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                            <i class="fas fa-magic"></i> Generate Financial Dashboard
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features section -->
+            <div class="row mt-5">
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-chart-bar fa-2x icon-green mb-3"></i>
+                            <h5>Visual Analytics</h5>
+                            <p class="text-muted">Interactive charts and graphs showing financial performance</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-robot fa-2x icon-green mb-3"></i>
+                            <h5>AI Forecasting</h5>
+                            <p class="text-muted">Predict future financial trends using machine learning</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-exclamation-triangle fa-2x icon-warning mb-3"></i>
+                            <h5>Risk Analysis</h5>
+                            <p class="text-muted">Identify potential risks and opportunities</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}  <script>
+$(document).ready(function() {
+    $('#documentUploadForm').on('submit', function() {
+        $('#submitBtn').html('<i class="fas fa-spinner fa-spin"></i> Processing...').prop('disabled', true);
+    });
+});
+</script>
+{% endblock %}

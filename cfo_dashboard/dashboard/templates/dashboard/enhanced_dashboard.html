@@ -1,0 +1,955 @@
+{% extends 'dashboard/base.html' %}
+
+{% load static %}
+
+{% load dashboard_extras %}
+
+
+
+{% block head %}
+
+<style>
+
+/* Custom CSS for AI CFO Dashboard - V2 */
+
+body {
+
+background-color: #f4f7f6; /* Lighter grey background */
+
+}
+
+
+
+.card {
+
+border: none;
+
+box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+
+transition: all 0.3s ease-in-out;
+
+border-radius: 10px;
+
+}
+
+
+
+.card:hover {
+
+box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+
+transform: translateY(-5px);
+
+}
+
+
+.card-header {
+
+background: #ffffff;
+
+border-bottom: 1px solid #e9ecef;
+
+font-weight: 600;
+
+padding: 1rem 1.25rem;
+
+}
+
+
+.display-6 {
+
+font-weight: 600;
+
+}
+
+
+
+/* Primary Metric Cards (Revenue, Profit) */
+
+.metric-card-primary {
+
+color: white;
+
+background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+}
+
+
+
+.metric-card-primary .display-6, .metric-card-primary .card-title {
+
+color: white;
+
+}
+
+
+/* Secondary Metric Cards (Ratios, Runway) */
+
+.metric-card-secondary .display-6 {
+
+font-weight: 500;
+
+color: #343a40;
+
+}
+
+
+
+.metric-card-secondary .card-title {
+
+font-size: 0.9rem;
+
+font-weight: 500;
+
+color: #6c757d;
+
+text-transform: uppercase;
+
+}
+
+
+/* Risk & Opportunity Items */
+
+.risk-item, .opportunity-item {
+
+background-color: #ffffff;
+
+border-radius: 8px;
+
+transition: all 0.2s ease;
+
+border: 1px solid #e9ecef;
+
+}
+
+
+.risk-item {
+
+border-left: 4px solid #dc3545;
+
+}
+
+
+
+.opportunity-item {
+
+border-left: 4px solid #28a745;
+
+}
+
+
+.risk-item:hover, .opportunity-item:hover {
+
+background-color: #f8f9fa;
+
+transform: translateX(4px);
+
+}
+
+
+.chart-container {
+
+min-height: 400px;
+
+position: relative;
+
+}
+
+
+/* Custom Buttons */
+
+.btn-primary {
+
+background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+border: none;
+
+border-radius: 25px;
+
+padding: 0.5rem 1.5rem;
+
+font-weight: 500;
+
+transition: all 0.3s ease;
+
+box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+}
+
+
+
+.btn-primary:hover {
+
+transform: translateY(-2px);
+
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+}
+
+
+/* Slider Controls */
+
+.form-range::-webkit-slider-thumb {
+
+background: #667eea;
+
+}
+
+.form-range::-moz-range-thumb {
+
+background: #667eea;
+
+}
+
+
+
+/* Alert Customizations */
+
+.alert {
+
+border-radius: 10px;
+
+border-left: 5px solid;
+
+}
+
+
+
+.alert-info { border-color: #17a2b8; }
+
+.alert-warning { border-color: #ffc107; }
+
+
+.spinner-container { text-align: center; padding: 1rem; }
+
+</style>
+
+{% endblock %}
+
+
+
+{% block title %}Enhanced Financial Dashboard{% endblock %}
+
+
+
+{% block content %}
+
+<div class="container-fluid my-4">
+
+
+
+<div class="row mb-4">
+
+<div class="col-12">
+
+<div class="card p-4 border-0">
+
+<h1 class="display-6"><i class="fas fa-chart-line text-primary"></i> Financial Health Dashboard</h1>
+
+<p class="text-muted mb-0">Analysis for: <strong>{{ document.original_filename }}</strong></p>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+{% if sample_mode %}
+
+<div class="alert alert-info">
+
+<i class="fas fa-info-circle"></i> <strong>Sample Dashboard:</strong> This dashboard shows sample data.
+
+</div>
+
+{% endif %}
+
+
+
+{% if executive_summary %}
+
+<div class="row mb-4">
+
+<div class="col-12">
+
+<div class="card">
+
+<div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-robot text-primary"></i> AI-Generated Executive Summary</h5></div>
+
+<div class="card-body"><p class="card-text"><em>{{ executive_summary|safe }}</em></p></div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+
+{% if historical_data %}
+
+{% with latest=historical_data|last %}
+
+{% with revenue_key="Revenue "|add:latest.year profit_key="Profit "|add:latest.year %}
+
+<div class="row mb-4">
+
+<div class="col-md-4 mb-3">
+
+<div class="card metric-card-primary h-100">
+
+<div class="card-body text-center d-flex flex-column justify-content-center">
+
+<h5 class="card-title">
+
+Total Revenue ({{ latest.year }})
+
+<i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="{{ data_sources|get_item:revenue_key|default:'Source not specified' }}"></i>
+
+</h5>
+
+<h2 class="display-6">₹{{ latest.revenue_crore|floatformat:0 }} Cr</h2>
+
+{% if historical_data|length > 1 %}{% with previous=historical_data|slice:"-2:-1"|first %}{% if previous.revenue_crore > 0 %}{% widthratio latest.revenue_crore|add:0.0 previous.revenue_crore|add:0.0 100 as growth_rate %}<small class="{% if growth_rate > 100 %}text-white-50{% else %}text-warning{% endif %}">{% if growth_rate > 100 %}<i class="fas fa-arrow-up"></i> +{{ growth_rate|add:"-100"|floatformat:1 }}% YoY{% else %}<i class="fas fa-arrow-down"></i> {{ growth_rate|add:"-100"|floatformat:1 }}% YoY{% endif %}</small>{% endif %}{% endwith %}{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-4 mb-3">
+
+<div class="card metric-card-primary h-100">
+
+<div class="card-body text-center d-flex flex-column justify-content-center">
+
+<h5 class="card-title">
+
+Profit After Tax ({{ latest.year }})
+
+<i class="fas fa-info-circle ms-1" data-bs-toggle="tooltip" title="{{ data_sources|get_item:profit_key|default:'Source not specified' }}"></i>
+
+</h5>
+
+<h2 class="display-6">₹{{ latest.profit_crore|floatformat:0 }} Cr</h2>
+
+{% if historical_data|length > 1 %}{% with previous=historical_data|slice:"-2:-1"|first %}<small class="{% if latest.profit_crore > previous.profit_crore %}text-white-50{% else %}text-warning{% endif %}">{% if latest.profit_crore > previous.profit_crore %}<i class="fas fa-arrow-up"></i> Improved YoY{% else %}<i class="fas fa-arrow-down"></i> Declined YoY{% endif %}</small>{% endwith %}{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-4 mb-3">
+
+<div class="card h-100">
+
+<div class="card-body text-center d-flex flex-column justify-content-center">
+
+<h5 class="card-title text-muted">Net Profit Margin ({{ latest.year }})</h5>
+
+{% if latest.revenue_crore > 0 %}{% widthratio latest.profit_crore|add:0.0 latest.revenue_crore|add:0.0 100 as margin %}<h2 class="display-6 text-primary">{{ margin|floatformat:1 }}%</h2>{% else %}<h2 class="display-6">N/A</h2>{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endwith %}{% endwith %}
+
+{% endif %}
+
+
+
+{% if analysis_results.metrics %}
+
+<div class="row mb-4">
+
+<div class="col-md-3 col-6 mb-3"><div class="card metric-card-secondary h-100"><div class="card-body text-center"><h5 class="card-title">Cash Runway</h5>{% with runway=analysis_results.metrics.runway_months %}{% if runway is not None %}{% if runway == 9999.0 %}<h2 class="display-6 text-success">Positive</h2><small class="text-muted">Cash Flow Positive</small>{% else %}<h2 class="display-6 {% if runway < 6 %}text-danger{% elif runway < 12 %}text-warning{% endif %}">{{ runway|floatformat:1 }}</h2><small class="text-muted">months</small>{% endif %}{% else %}<h2 class="display-6">N/A</h2>{% endif %}{% endwith %}</div></div></div>
+
+<div class="col-md-3 col-6 mb-3"><div class="card metric-card-secondary h-100"><div class="card-body text-center"><h5 class="card-title">Net Burn</h5>{% with burn=analysis_results.metrics.net_burn_monthly_crore %}{% if burn is not None %}<h2 class="display-6 {% if burn > 0 %}text-danger{% else %}text-success{% endif %}">₹{{ burn|floatformat:1 }} Cr</h2><small class="text-muted">per month</small>{% else %}<h2 class="display-6">N/A</h2>{% endif %}{% endwith %}</div></div></div>
+
+<div class="col-md-3 col-6 mb-3"><div class="card metric-card-secondary h-100"><div class="card-body text-center"><h5 class="card-title">Current Ratio</h5>{% with ratio=analysis_results.metrics.current_ratio %}{% if ratio is not None %}<h2 class="display-6 {% if ratio < 1.0 %}text-danger{% elif ratio < 1.5 %}text-warning{% else %}text-success{% endif %}">{{ ratio|floatformat:2 }}</h2>{% else %}<h2 class="display-6">N/A</h2>{% endif %}{% endwith %}</div></div></div>
+
+<div class="col-md-3 col-6 mb-3"><div class="card metric-card-secondary h-100"><div class="card-body text-center"><h5 class="card-title">Debt-to-Asset</h5>{% with ratio=analysis_results.metrics.debt_to_asset_ratio %}{% if ratio is not None %}<h2 class="display-6 {% if ratio > 0.6 %}text-danger{% endif %}">{{ ratio|floatformat:2 }}</h2>{% else %}<h2 class="display-6">N/A</h2>{% endif %}{% endwith %}</div></div></div>
+
+</div>
+
+{% endif %}
+
+
+
+{% if analysis_results.risk_flags %}
+
+<div class="row mb-4">
+
+<div class="col-12">
+
+<div class="card border-warning">
+
+<div class="card-header bg-warning text-dark">
+
+<h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Automated Financial Alerts</h5>
+
+</div>
+
+<div class="card-body">
+
+{% for flag in analysis_results.risk_flags %}
+
+<div class="alert alert-warning mb-2">🚩 {{ flag }}</div>
+
+{% endfor %}
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+
+<!-- <div class="row mb-4">
+
+{% if revenue_breakdown %}<div class="col-lg-4 mb-4"><div class="card h-100"><div class="card-header"><h5 class="mb-0"><i class="fas fa-chart-pie text-info"></i> Revenue Breakdown</h5></div><div class="card-body"><div class="chart-container">{{ charts.breakdown|safe }}</div></div></div></div><div class="col-lg-8 mb-4">{% else %}<div class="col-lg-12 mb-4">{% endif %}<div class="card h-100"><div class="card-header"><h5 class="mb-0"><i class="fas fa-chart-bar text-success"></i> Historical Performance</h5></div><div class="card-body"><div class="chart-container">{{ charts.historical|safe }}</div></div></div></div>
+
+</div> -->
+
+
+
+{% if can_forecast %}
+
+<div class="row mb-4">
+
+<div class="col-12">
+
+<div class="card">
+
+<div class="card-header"><h5 class="mb-0"><i class="fas fa-crystal-ball text-primary"></i> Advanced Forecasting & What-If Analysis</h5></div>
+
+<div class="card-body">
+
+<div class="row">
+
+<div class="col-md-6 mb-3">
+
+<h6 class="text-muted mb-3">SCENARIO CONTROLS</h6>
+
+<div class="p-3 border rounded">
+
+<strong class="text-dark">P&L Forecasting</strong>
+
+<div class="mb-2"><label for="revenueGrowthSlider" class="form-label mb-0">Annual Revenue Growth: <strong id="revenueGrowthValue">5</strong>%</label><input type="range" class="form-range" min="-20" max="50" value="5" id="revenueGrowthSlider"></div>
+
+<div class="mb-3"><label for="expenseGrowthSlider" class="form-label mb-0">Annual Expense Growth: <strong id="expenseGrowthValue">3</strong>%</label><input type="range" class="form-range" min="-20" max="50" value="3" id="expenseGrowthSlider"></div>
+
+<button class="btn btn-sm btn-primary" onclick="generateWhatIf(this)"><i class="fas fa-chart-line"></i> Update Forecast</button>
+
+<hr>
+
+<strong class="text-dark">Runway Simulation</strong>
+
+<div class="mb-2"><label for="hiringSlider" class="form-label mb-0">New Monthly Hirings: <strong id="hiringValue">0</strong> Lakhs</label><input type="range" class="form-range" min="0" max="100" value="0" step="5" id="hiringSlider"></div>
+
+<div class="mb-2"><label for="mrrSlider" class="form-label mb-0">New Monthly Revenue (MRR): <strong id="mrrValue">0</strong> Lakhs</label><input type="range" class="form-range" min="0" max="100" value="0" step="5" id="mrrSlider"></div>
+
+<div class="mb-3"><label for="expenseReductionSlider" class="form-label mb-0">Monthly Expense Reduction: <strong id="expenseReductionValue">0</strong> Lakhs</label><input type="range" class="form-range" min="0" max="100" value="0" step="5" id="expenseReductionSlider"></div>
+
+<button class="btn btn-sm btn-info text-white" onclick="simulateRunway(this)"><i class="fas fa-tachometer-alt"></i> Simulate Runway</button>
+
+</div>
+
+</div>
+
+<div class="col-md-6 mb-3">
+
+<h6 class="text-muted mb-3">SCENARIO IMPACT SUMMARY</h6>
+
+<div class="p-3 border rounded h-100 d-flex flex-column justify-content-center">
+
+<div class="row text-center mb-3"><div class="col-6 border-end"><h4 class="text-primary mb-0" id="projectedRevenue">--</h4><small class="text-muted">3-Year Revenue</small></div><div class="col-6"><h4 class="text-success mb-0" id="projectedProfit">--</h4><small class="text-muted">3-Year Profit</small></div></div>
+
+<hr>
+
+<div class="row text-center mt-3"><div class="col-12"><h4 class="text-info mb-0" id="projectedRunway">--</h4><small class="text-muted">Simulated Cash Runway</small></div></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="chart-container mt-4"><div id="enhanced-forecast-chart"></div></div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+
+{% if has_competitor_data %}
+
+<div class="row mb-4">
+
+<div class="col-12">
+
+<div class="card">
+
+<div class="card-header"><h5 class="mb-0"><i class="fas fa-balance-scale text-warning"></i> Detailed Competitive Benchmarking</h5></div>
+
+<div class="card-body">
+
+<div id="competitorInsights" class="text-center">
+
+<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+
+<div class="row mb-4">
+
+<div class="col-md-6 mb-3">
+
+<div class="card h-100">
+
+<div class="card-header"><h5 class="mb-0"><i class="fas fa-exclamation-circle text-danger"></i> Key Risks (from document)</h5></div>
+
+<div class="card-body">{% for risk in risks %}<div class="risk-item p-3 mb-2"><div class="d-flex justify-content-between align-items-center"><strong>🚨 {{ risk }}</strong><button class="btn btn-sm btn-outline-danger" onclick="toggleExplanation('risk', {{ forloop.counter0 }}, '{{ risk }}')">Details</button></div><div id="risk-explanation-{{ forloop.counter0 }}" class="mt-2 d-none spinner-container"><div class="spinner-border spinner-border-sm" role="status"></div></div></div>{% empty %}<p class="text-muted">No specific risks identified.</p>{% endfor %}</div>
+
+</div>
+
+</div>
+
+<div class="col-md-6 mb-3">
+
+<div class="card h-100">
+
+<div class="card-header"><h5 class="mb-0"><i class="fas fa-lightbulb text-success"></i> Key Opportunities (from document)</h5></div>
+
+<div class="card-body">{% for opportunity in opportunities %}<div class="opportunity-item p-3 mb-2"><div class="d-flex justify-content-between align-items-center"><strong>💡 {{ opportunity }}</strong><button class="btn btn-sm btn-outline-success" onclick="toggleExplanation('opportunity', {{ forloop.counter0 }}, '{{ opportunity }}')">Details</button></div><div id="opportunity-explanation-{{ forloop.counter0 }}" class="mt-2 d-none spinner-container"><div class="spinner-border spinner-border-sm" role="status"></div></div></div>{% empty %}<p class="text-muted">No specific opportunities identified.</p>{% endfor %}</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+</div>
+
+{% endblock %}
+
+
+
+
+
+{% block javascript %}
+
+{{ block.super }} <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script>
+
+const historicalData = JSON.parse('{{ historical_data_json|escapejs }}');
+
+const currentForecastData = JSON.parse('{{ forecast_data_json|escapejs }}');
+
+const documentId = {{ document.id|default:"null" }};
+
+const isSampleMode = {{ sample_mode|yesno:"true,false" }};
+
+const canForecast = {{ can_forecast|yesno:"true,false" }};
+
+
+
+function initEnhancedForecastChart() {
+
+if (!historicalData || historicalData.length === 0) return;
+
+const traces = [];
+
+const years = historicalData.map(d => d.year);
+
+traces.push({ x: years, y: historicalData.map(d => d.revenue_crore), name: 'Historical Revenue', type: 'scatter', mode: 'lines+markers', line: { color: '#007bff', width: 3 } });
+
+traces.push({ x: years, y: historicalData.map(d => d.profit_crore), name: 'Historical Profit', type: 'scatter', mode: 'lines+markers', line: { color: '#28a745', width: 3 } });
+
+if (currentForecastData && currentForecastData.length > 0) {
+
+addForecastTraces(traces, currentForecastData, 'forecast');
+
+}
+
+const layout = {
+
+title: { text: 'Financial Performance & Projections', font: { size: 18 } },
+
+xaxis: { title: 'Year', tickmode: 'linear', dtick: 1 },
+
+yaxis: { title: 'Amount (₹ Crore)' },
+
+hovermode: 'x unified',
+
+legend: { x: 0, y: 1.1, orientation: 'h' },
+
+height: 450,
+
+margin: { t: 40, b: 40, l: 60, r: 20 }
+
+};
+
+Plotly.newPlot('enhanced-forecast-chart', traces, layout);
+
+}
+
+
+
+function addForecastTraces(traces, forecastData, type) {
+
+const forecastColors = { revenue: '#ff6b6b', profit: '#ff9f43' };
+
+const defaultColors = { revenue: '#6c757d', profit: '#6c757d' };
+
+['Revenue', 'Profit'].forEach(metric => {
+
+const data = forecastData.filter(d => d.metric === metric);
+
+if (data.length > 0) {
+
+traces.push({
+
+x: data.map(d => d.year),
+
+y: data.map(d => d.value),
+
+name: `${type === 'what_if' ? 'What-If' : 'Forecast'} ${metric}`,
+
+type: 'scatter', mode: 'lines+markers',
+
+line: { color: type === 'what_if' ? forecastColors[metric.toLowerCase()] : defaultColors[metric.toLowerCase()], dash: 'dash', width: 3 }
+
+});
+
+}
+
+});
+
+}
+
+
+
+function updateSliderValues() {
+
+if(document.getElementById('revenueGrowthSlider')) {
+
+document.getElementById('revenueGrowthValue').textContent = document.getElementById('revenueGrowthSlider').value;
+
+document.getElementById('expenseGrowthValue').textContent = document.getElementById('expenseGrowthSlider').value;
+
+}
+
+if(document.getElementById('hiringSlider')) {
+
+document.getElementById('hiringValue').textContent = document.getElementById('hiringSlider').value;
+
+document.getElementById('mrrValue').textContent = document.getElementById('mrrSlider').value;
+
+document.getElementById('expenseReductionValue').textContent = document.getElementById('expenseReductionSlider').value;
+
+}
+
+}
+
+
+
+function generateWhatIf(button) {
+
+if (!documentId && !isSampleMode) { alert('An error occurred. Missing document ID.'); return; }
+
+if (isSampleMode) { alert('What-if analysis is disabled for sample data.'); return; }
+
+
+const revenueGrowth = document.getElementById('revenueGrowthSlider').value;
+
+const expenseGrowth = document.getElementById('expenseGrowthSlider').value;
+
+const originalText = button.innerHTML;
+
+button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+
+button.disabled = true;
+
+fetch("{% url 'dashboard:what_if_analysis' %}", {
+
+method: 'POST',
+
+headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+
+body: JSON.stringify({ document_id: documentId, revenue_growth: parseFloat(revenueGrowth), expense_growth: parseFloat(expenseGrowth) })
+
+})
+
+.then(response => response.json())
+
+.then(data => {
+
+if (data.success) {
+
+updateForecastChart(data.forecast_data);
+
+updateScenarioSummary(data.forecast_data);
+
+} else { alert('Error: ' + data.error); }
+
+})
+
+.catch(error => { console.error('Error:', error); alert('An error occurred.'); })
+
+.finally(() => { button.innerHTML = '<i class="fas fa-chart-line"></i> Update Forecast'; button.disabled = false; });
+
+}
+
+
+
+function updateForecastChart(whatIfData) {
+
+const chartDiv = document.getElementById('enhanced-forecast-chart');
+
+const filteredData = chartDiv.data.filter(trace => !trace.name.includes('What-If'));
+
+addForecastTraces(filteredData, whatIfData, 'what_if');
+
+Plotly.react(chartDiv, filteredData, chartDiv.layout);
+
+}
+
+
+
+function updateScenarioSummary(forecastData) {
+
+const finalYearData = forecastData.filter(d => d.year === Math.max(...forecastData.map(item => item.year)));
+
+const revenue = finalYearData.find(d => d.metric === 'Revenue');
+
+const profit = finalYearData.find(d => d.metric === 'Profit');
+
+if (revenue) { document.getElementById('projectedRevenue').textContent = `₹${revenue.value.toFixed(0)} Cr`; }
+
+if (profit) { document.getElementById('projectedProfit').textContent = `₹${profit.value.toFixed(0)} Cr`; }
+
+}
+
+
+
+function simulateRunway(button) {
+
+if (!documentId) { alert('Runway simulation requires uploaded data.'); return; }
+
+const hiring_cost = document.getElementById('hiringSlider').value;
+
+const new_mrr = document.getElementById('mrrSlider').value;
+
+const expense_reduction = document.getElementById('expenseReductionSlider').value;
+
+const originalText = button.innerHTML;
+
+button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Simulating...';
+
+button.disabled = true;
+
+fetch("{% url 'dashboard:runway_what_if' %}", {
+
+method: 'POST',
+
+headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+
+body: JSON.stringify({ document_id: documentId, hiring_cost: parseFloat(hiring_cost), new_mrr: parseFloat(new_mrr), expense_reduction: parseFloat(expense_reduction) })
+
+})
+
+.then(response => response.json())
+
+.then(data => {
+
+const runwayEl = document.getElementById('projectedRunway');
+
+if (data.success && data.new_runway_months !== null) {
+
+if (data.new_runway_months === 9999.0) { runwayEl.textContent = 'Positive ✅'; }
+
+else { runwayEl.textContent = `${data.new_runway_months} months`; }
+
+} else {
+
+runwayEl.textContent = 'Error';
+
+alert('Error: ' + (data.error || 'Could not calculate runway.'));
+
+}
+
+})
+
+.catch(error => { console.error('Error:', error); alert('An error occurred during simulation.'); })
+
+.finally(() => { button.innerHTML = '<i class="fas fa-tachometer-alt"></i> Simulate Runway'; button.disabled = false; });
+
+}
+
+
+function loadCompetitorInsights() {
+
+if (!documentId || isSampleMode) return;
+
+fetch(`/api/competitor-insights/${documentId}/`)
+
+.then(response => response.json())
+
+.then(data => {
+
+const container = document.getElementById('competitorInsights');
+
+if (data.error) {
+
+container.innerHTML = `<div class="alert alert-warning">${data.error}</div>`;
+
+} else if (data.competitor_data) {
+
+const competitor = data.competitor_data;
+
+const metrics = competitor.comparison_metrics;
+
+container.innerHTML = `
+
+<div class="row"><div class="col-lg-7"><div id="competitor-chart-container"></div></div><div class="col-lg-5"><h6 class="text-start">Key Insights vs ${competitor.name}</h6><div class="alert ${metrics.company_margin > metrics.competitor_margin ? 'alert-success' : 'alert-warning'}"><strong>Profitability:</strong> Your margin (${metrics.company_margin}%) is ${metrics.company_margin > metrics.competitor_margin ? 'better' : 'worse'} than competitor's (${metrics.competitor_margin}%).</div><div class="alert ${metrics.revenue_ratio > 1 ? 'alert-success' : 'alert-warning'}"><strong>Scale:</strong> Your latest revenue is ${metrics.revenue_ratio.toFixed(2)}x that of the competitor.</div></div></div>`;
+
+createCompetitorChart(competitor, data.company_data);
+
+}
+
+})
+
+.catch(error => { console.error('Error:', error); document.getElementById('competitorInsights').innerHTML = `<div class="alert alert-danger">Error loading competitor insights.</div>`; });
+
+}
+
+
+
+function createCompetitorChart(competitor, company) {
+
+const traces = [
+
+{ x: company.map(d => d.year), y: company.map(d => d.revenue_crore), name: 'Your Revenue', type: 'bar', marker: { color: '#667eea' } },
+
+{ x: competitor.performance.map(d => d.year), y: competitor.performance.map(d => d.revenue_crore), name: `${competitor.name} Revenue`, type: 'bar', marker: { color: '#764ba2' } }
+
+];
+
+const layout = { title: 'Revenue Comparison', xaxis: { title: 'Year' }, yaxis: { title: 'Revenue (₹ Crore)' }, barmode: 'group', height: 350, margin: { t: 40, b: 40, l: 60, r: 20 }, legend: { x: 0, y: 1.1, orientation: 'h' } };
+
+Plotly.newPlot('competitor-chart-container', traces, layout);
+
+}
+
+
+
+function toggleExplanation(type, index, topic) {
+
+const explanationDiv = document.getElementById(`${type}-explanation-${index}`);
+
+if (explanationDiv.classList.toggle('d-none')) return;
+
+if (explanationDiv.dataset.loaded) return;
+
+fetch(`/api/${type}-explanation/`, {
+
+method: 'POST',
+
+headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}' },
+
+body: `csrfmiddlewaretoken={{ csrf_token }}&${type}_topic=${encodeURIComponent(topic)}`
+
+})
+
+.then(response => response.json())
+
+.then(data => {
+
+explanationDiv.innerHTML = `<div class="alert alert-light small p-2 mb-0">${data.explanation || data.error}</div>`;
+
+explanationDiv.dataset.loaded = 'true';
+
+})
+
+.catch(() => { explanationDiv.innerHTML = `<div class="alert alert-danger small p-2 mb-0">Failed to load.</div>`; });
+
+}
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+
+const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+
+if (window.bootstrap) {
+
+[...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+}
+
+
+
+if (canForecast) {
+
+initEnhancedForecastChart();
+
+updateSliderValues();
+
+document.querySelectorAll('#revenueGrowthSlider, #expenseGrowthSlider, #hiringSlider, #mrrSlider, #expenseReductionSlider').forEach(slider => {
+
+if(slider) slider.addEventListener('input', updateSliderValues);
+
+});
+
+}
+
+if (document.querySelector('#competitorInsights')) {
+
+loadCompetitorInsights();
+
+}
+
+});
+
+</script>
+
+{% endblock %}

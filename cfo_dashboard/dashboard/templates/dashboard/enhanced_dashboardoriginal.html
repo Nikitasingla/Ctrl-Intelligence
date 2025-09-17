@@ -1,0 +1,832 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Enhanced Financial Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+
+
+
+    {% if sample_mode %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        <strong>Sample Dashboard:</strong> This dashboard shows data from Zomato's Annual Report 2023-24
+    </div>
+    {% endif %}
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6">
+                <i class="fas fa-chart-line text-primary"></i>
+                Financial Health Dashboard
+            </h1>
+            {% if not sample_mode %}
+            <p class="text-muted">Analysis for: {{ document.original_filename }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    {% if historical_data %}
+    <div class="row mb-4">
+        {% with latest=historical_data|last %}
+        <div class="col-md-4">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Revenue ({{ latest.year }})</h5>
+                    <h2 class="display-6">₹{{ latest.revenue_crore|floatformat:0 }} Cr</h2>
+                    {% if historical_data|length > 1 %}
+                        {% with previous=historical_data|slice:"-2:-1"|first %}
+                        <small>
+                            {% widthratio latest.revenue_crore previous.revenue_crore 100 as growth_rate %}
+                            {% if growth_rate > 100 %}
+                                <i class="fas fa-arrow-up text-success"></i>
+                                +{{ growth_rate|add:"-100" }}% YoY
+                            {% else %}
+                                <i class="fas fa-arrow-down text-danger"></i>
+                                {{ growth_rate|add:"-100" }}% YoY
+                            {% endif %}
+                        </small>
+                        {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Profit After Tax ({{ latest.year }})</h5>
+                    <h2 class="display-6">₹{{ latest.profit_crore|floatformat:0 }} Cr</h2>
+                    {% if historical_data|length > 1 %}
+                        {% with previous=historical_data|slice:"-2:-1"|first %}
+                        <small>
+                            {% if latest.profit_crore > previous.profit_crore %}
+                                <i class="fas fa-arrow-up text-success"></i>
+                                Improved YoY
+                            {% else %}
+                                <i class="fas fa-arrow-down text-danger"></i>
+                                Declined YoY
+                            {% endif %}
+                        </small>
+                        {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Net Profit Margin ({{ latest.year }})</h5>
+                    {% if latest.revenue_crore > 0 %}
+                        {% widthratio latest.profit_crore latest.revenue_crore 100 as margin %}
+                        <h2 class="display-6">{{ margin|floatformat:1 }}%</h2>
+                    {% else %}
+                        <h2 class="display-6">N/A</h2>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+    </div>
+    {% endif %}
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Revenue Breakdown -->
+        {% if revenue_breakdown %}
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Revenue Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        {{ charts.breakdown|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+        {% else %}
+        <div class="col-md-12">
+        {% endif %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Historical Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        {{ charts.historical|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forecast Section -->
+    {% if forecast_data %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-crystal-ball"></i> 
+                        3-Year Financial Forecast
+                        <span class="badge forecast-badge ms-2">AI Generated</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Disclaimer:</strong> These forecasts are generated using simple linear regression and should be used for reference only.
+                    </div>
+                    <div class="chart-container">
+                        <div id="forecast-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Competitor Analysis -->
+    {% if has_competitor_data %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> 
+                        Competitive Analysis vs {{ financial_data.competitor_data.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                {{ charts.competitor_revenue|safe }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                {{ charts.competitor_profit|safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Risks and Opportunities -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle text-danger"></i> Key Risks</h5>
+                </div>
+                <div class="card-body">
+                    {% if risks %}
+                        {% for risk in risks %}
+                        <div class="risk-item p-3 mb-3 rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>🚨 {{ risk }}</strong>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="getRiskExplanation('{{ risk }}', {{ forloop.counter0 }})">
+                                    Details
+                                </button>
+                            </div>
+                            <div id="risk-explanation-{{ forloop.counter0 }}" class="mt-2 d-none">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No specific risks identified in the document.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb text-success"></i> Key Opportunities</h5>
+                </div>
+                <div class="card-body">
+                    {% if opportunities %}
+                        {% for opportunity in opportunities %}
+                        <div class="opportunity-item p-3 mb-3 rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>💡 {{ opportunity }}</strong>
+                                <button class="btn btn-sm btn-outline-success" 
+                                        onclick="getOpportunityExplanation('{{ opportunity }}', {{ forloop.counter0 }})">
+                                    Details
+                                </button>
+                            </div>
+                            <div id="opportunity-explanation-{{ forloop.counter0 }}" class="mt-2 d-none">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No specific opportunities identified in the document.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Data Section -->
+    {% if not sample_mode %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link p-0" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#rawData">
+                            <i class="fas fa-code"></i> View Raw Extracted JSON Data
+                        </button>
+                    </h5>
+                </div>
+                <div class="collapse" id="rawData">
+                    <div class="card-body">
+                        <pre class="bg-light p-3 rounded"><code>{{ financial_data.extracted_data|pprint }}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- Existing content remains the same until forecast section -->
+    
+    <!-- Enhanced Forecast Section with What-If Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-crystal-ball"></i> 
+                        Advanced Financial Forecasting & What-If Analysis
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- What-If Controls -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">What-If Scenario Controls</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="revenueGrowthSlider" class="form-label">
+                                            Annual Revenue Growth Rate: <span id="revenueGrowthValue">5</span>%
+                                        </label>
+                                        <input type="range" class="form-range" min="-20" max="50" value="5" 
+                                               id="revenueGrowthSlider" oninput="updateWhatIf()">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="expenseGrowthSlider" class="form-label">
+                                            Annual Expense Growth Rate: <span id="expenseGrowthValue">3</span>%
+                                        </label>
+                                        <input type="range" class="form-range" min="-20" max="50" value="3" 
+                                               id="expenseGrowthSlider" oninput="updateWhatIf()">
+                                    </div>
+                                    <button class="btn btn-primary" onclick="generateWhatIf()">
+                                        <i class="fas fa-chart-line"></i> Update Forecast
+                                    </button>
+                                    <button class="btn btn-secondary ms-2" onclick="resetToDefault()">
+                                        <i class="fas fa-undo"></i> Reset to Default
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">Scenario Impact Summary</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="scenarioSummary">
+                                        <div class="row text-center">
+                                            <div class="col-6">
+                                                <h4 class="text-primary" id="projectedRevenue">₹0 Cr</h4>
+                                                <small class="text-muted">Projected Revenue (2027)</small>
+                                            </div>
+                                            <div class="col-6">
+                                                <h4 class="text-success" id="projectedProfit">₹0 Cr</h4>
+                                                <small class="text-muted">Projected Profit (2027)</small>
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <div class="row text-center">
+                                            <div class="col-12">
+                                                <h5 class="text-info" id="projectedMargin">0%</h5>
+                                                <small class="text-muted">Projected Net Margin (2027)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Chart -->
+                    <div class="chart-container">
+                        <div id="enhanced-forecast-chart"></div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>How to use:</strong> Adjust the sliders above to see how different growth scenarios affect your financial projections. 
+                        The chart will update in real-time to show the impact of your assumptions.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Competitor Analysis -->
+    {% if has_competitor_data %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-balance-scale"></i> 
+                        Detailed Competitive Benchmarking
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="competitorInsights">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading competitor insights...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Rest of the template remains the same -->
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+let currentForecastData = {{ forecast_data|safe }};
+let historicalData = {{ historical_data|safe }};
+let documentId = {{ document.id|default:"null" }};
+
+// Initialize enhanced forecast chart
+function initEnhancedForecastChart() {
+    if (!historicalData || historicalData.length === 0) return;
+    
+    const traces = [];
+    
+    // Historical data
+    const years = historicalData.map(d => d.year);
+    const revenues = historicalData.map(d => d.revenue_crore);
+    const profits = historicalData.map(d => d.profit_crore);
+    
+    traces.push({
+        x: years,
+        y: revenues,
+        name: 'Historical Revenue',
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { color: '#007bff', width: 3 }
+    });
+    
+    traces.push({
+        x: years,
+        y: profits,
+        name: 'Historical Profit',
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { color: '#28a745', width: 3 }
+    });
+    
+    // Default forecast data
+    if (currentForecastData && currentForecastData.length > 0) {
+        addForecastTraces(traces, currentForecastData, 'forecast');
+    }
+    
+    const layout = {
+        title: {
+            text: 'Financial Performance & Projections',
+            font: { size: 18 }
+        },
+        xaxis: { 
+            title: 'Year',
+            tickmode: 'linear',
+            tick0: Math.min(...years),
+            dtick: 1
+        },
+        yaxis: { title: 'Amount (₹ Crore)' },
+        hovermode: 'x unified',
+        legend: { x: 0, y: 1 },
+        height: 500
+    };
+    
+    Plotly.newPlot('enhanced-forecast-chart', traces, layout);
+}
+
+function addForecastTraces(traces, forecastData, type) {
+    const revenueForecasts = forecastData.filter(d => d.metric === 'Revenue');
+    const profitForecasts = forecastData.filter(d => d.metric === 'Profit');
+    
+    if (revenueForecasts.length > 0) {
+        traces.push({
+            x: revenueForecasts.map(d => d.year),
+            y: revenueForecasts.map(d => d.value),
+            name: type === 'what_if_forecast' ? 'What-If Revenue' : 'Forecast Revenue',
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: { 
+                color: type === 'what_if_forecast' ? '#ff6b6b' : '#007bff', 
+                dash: 'dash',
+                width: 3
+            }
+        });
+    }
+    
+    if (profitForecasts.length > 0) {
+        traces.push({
+            x: profitForecasts.map(d => d.year),
+            y: profitForecasts.map(d => d.value),
+            name: type === 'what_if_forecast' ? 'What-If Profit' : 'Forecast Profit',
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: { 
+                color: type === 'what_if_forecast' ? '#ff9f43' : '#28a745', 
+                dash: 'dash',
+                width: 3
+            }
+        });
+    }
+}
+
+function updateSliderValues() {
+    const revenueGrowth = document.getElementById('revenueGrowthSlider').value;
+    const expenseGrowth = document.getElementById('expenseGrowthSlider').value;
+    
+    document.getElementById('revenueGrowthValue').textContent = revenueGrowth;
+    document.getElementById('expenseGrowthValue').textContent = expenseGrowth;
+}
+
+function updateWhatIf() {
+    updateSliderValues();
+}
+
+function generateWhatIf() {
+    if (!documentId) {
+        alert('No document ID available');
+        return;
+    }
+    
+    const revenueGrowth = document.getElementById('revenueGrowthSlider').value;
+    const expenseGrowth = document.getElementById('expenseGrowthSlider').value;
+    
+    // Show loading
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+    button.disabled = true;
+    
+    fetch('/api/what-if-analysis/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            document_id: documentId,
+            revenue_growth: parseFloat(revenueGrowth),
+            expense_growth: parseFloat(expenseGrowth)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateForecastChart(data.forecast_data);
+            updateScenarioSummary(data.forecast_data);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while generating the forecast');
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+function updateForecastChart(whatIfData) {
+    // Get current chart
+    const chartDiv = document.getElementById('enhanced-forecast-chart');
+    const currentData = chartDiv.data;
+    
+    // Remove existing what-if traces
+    const filteredData = currentData.filter(trace => 
+        !trace.name.includes('What-If')
+    );
+    
+    // Add new what-if traces
+    addForecastTraces(filteredData, whatIfData, 'what_if_forecast');
+    
+    Plotly.redraw(chartDiv, filteredData);
+}
+
+function updateScenarioSummary(forecastData) {
+    const revenue2027 = forecastData.find(d => d.year === 2027 && d.metric === 'Revenue');
+    const profit2027 = forecastData.find(d => d.year === 2027 && d.metric === 'Profit');
+    
+    if (revenue2027 && profit2027) {
+        document.getElementById('projectedRevenue').textContent = `₹${revenue2027.value.toLocaleString()} Cr`;
+        document.getElementById('projectedProfit').textContent = `₹${profit2027.value.toLocaleString()} Cr`;
+        
+        const margin = revenue2027.value > 0 ? (profit2027.value / revenue2027.value * 100).toFixed(1) : 0;
+        document.getElementById('projectedMargin').textContent = `${margin}%`;
+    }
+}
+
+function resetToDefault() {
+    document.getElementById('revenueGrowthSlider').value = 5;
+    document.getElementById('expenseGrowthSlider').value = 3;
+    updateSliderValues();
+    
+    // Remove what-if traces and show default forecast
+    initEnhancedForecastChart();
+    
+    // Reset scenario summary
+    document.getElementById('projectedRevenue').textContent = '₹0 Cr';
+    document.getElementById('projectedProfit').textContent = '₹0 Cr';
+    document.getElementById('projectedMargin').textContent = '0%';
+}
+
+// Load competitor insights
+function loadCompetitorInsights() {
+    if (!documentId) return;
+    
+    fetch(`/api/competitor-insights/${documentId}/`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.competitor_data) {
+            renderCompetitorInsights(data.competitor_data, data.company_data);
+        } else {
+            document.getElementById('competitorInsights').innerHTML = 
+                '<div class="alert alert-warning">Unable to load competitor data</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading competitor insights:', error);
+        document.getElementById('competitorInsights').innerHTML = 
+            '<div class="alert alert-danger">Error loading competitor insights</div>';
+    });
+}
+
+function renderCompetitorInsights(competitor, company) {
+    const metrics = competitor.comparison_metrics;
+    
+    const html = `
+        <div class="row">
+            <div class="col-md-8">
+                <h6>Performance Comparison vs ${competitor.name}</h6>
+                <div class="row text-center mb-3">
+                    <div class="col-3">
+                        <div class="card border-primary">
+                            <div class="card-body">
+                                <h5 class="text-primary">${metrics.revenue_ratio}x</h5>
+                                <small>Revenue Ratio</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="card border-success">
+                            <div class="card-body">
+                                <h5 class="text-success">${metrics.company_margin}%</h5>
+                                <small>Your Margin</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="card border-warning">
+                            <div class="card-body">
+                                <h5 class="text-warning">${metrics.competitor_margin}%</h5>
+                                <small>Competitor Margin</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="card border-info">
+                            <div class="card-body">
+                                <h5 class="text-info">${competitor.sector}</h5>
+                                <small>Sector</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="competitor-chart"></div>
+            </div>
+            <div class="col-md-4">
+                <h6>Key Insights</h6>
+                <div class="alert ${metrics.revenue_ratio > 1 ? 'alert-success' : 'alert-warning'}">
+                    <strong>Revenue Position:</strong> 
+                    ${metrics.revenue_ratio > 1 ? 'You are outperforming' : 'You are underperforming'} 
+                    the competitor by ${Math.abs(((metrics.revenue_ratio - 1) * 100)).toFixed(1)}%
+                </div>
+                <div class="alert ${metrics.company_margin > metrics.competitor_margin ? 'alert-success' : 'alert-warning'}">
+                    <strong>Profitability:</strong> 
+                    Your margin is ${metrics.company_margin > metrics.competitor_margin ? 'better' : 'worse'} 
+                    by ${Math.abs(metrics.company_margin - metrics.competitor_margin).toFixed(1)}%
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('competitorInsights').innerHTML = html;
+    
+    // Create competitor comparison chart
+    createCompetitorChart(competitor, company);
+}
+
+function createCompetitorChart(competitor, company) {
+    const traces = [];
+    
+    // Company data
+    traces.push({
+        x: company.map(d => d.year),
+        y: company.map(d => d.revenue_crore),
+        name: 'Your Revenue',
+        type: 'bar'
+    });
+    
+    // Competitor data  
+    traces.push({
+        x: competitor.performance.map(d => d.year),
+        y: competitor.performance.map(d => d.revenue_crore),
+        name: `${competitor.name} Revenue`,
+        type: 'bar'
+    });
+    
+    const layout = {
+        title: 'Revenue Comparison',
+        xaxis: { title: 'Year' },
+        yaxis: { title: 'Revenue (₹ Crore)' },
+        barmode: 'group'
+    };
+    
+    Plotly.newPlot('competitor-chart', traces, layout);
+}
+
+// Initialize everything when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initEnhancedForecastChart();
+    updateSliderValues();
+    
+    {% if has_competitor_data %}
+    loadCompetitorInsights();
+    {% endif %}
+});
+
+// Risk and opportunity explanation functions (existing code)
+function getRiskExplanation(riskTopic, index) {
+    const explanationDiv = document.getElementById(`risk-explanation-${index}`);
+    explanationDiv.classList.remove('d-none');
+    
+    $.ajax({
+        url: "{% url 'dashboard:risk_explanation' %}",
+        type: 'POST',
+        data: {
+            'risk_topic': riskTopic,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            explanationDiv.innerHTML = `<div class="alert alert-light"><small>${response.explanation}</small></div>`;
+        },
+        error: function() {
+            explanationDiv.innerHTML = `<div class="alert alert-danger"><small>Failed to load explanation.</small></div>`;
+        }
+    });
+}
+
+function getOpportunityExplanation(opportunityTopic, index) {
+    const explanationDiv = document.getElementById(`opportunity-explanation-${index}`);
+    explanationDiv.classList.remove('d-none');
+    
+    $.ajax({
+        url: "{% url 'dashboard:opportunity_explanation' %}",
+        type: 'POST',
+        data: {
+            'opportunity_topic': opportunityTopic,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            explanationDiv.innerHTML = `<div class="alert alert-light"><small>${response.explanation}</small></div>`;
+        },
+        error: function() {
+            explanationDiv.innerHTML = `<div class="alert alert-danger"><small>Failed to load explanation.</small></div>`;
+        }
+    });
+}
+
+
+{% if forecast_data %}
+const forecastData = {{ forecast_data|safe }};
+
+// Prepare data for Plotly
+const traces = [];
+const metrics = [...new Set(forecastData.map(d => d.metric))];
+const types = [...new Set(forecastData.map(d => d.type))];
+
+metrics.forEach(metric => {
+    types.forEach(type => {
+        const data = forecastData.filter(d => d.metric === metric && d.type === type);
+        if (data.length > 0) {
+            traces.push({
+                x: data.map(d => d.year),
+                y: data.map(d => d.value),
+                name: `${metric} (${type.charAt(0).toUpperCase() + type.slice(1)})`,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: {
+                    dash: type === 'forecast' ? 'dash' : 'solid'
+                }
+            });
+        }
+    });
+});
+
+const layout = {
+    title: 'Historical Data & Future Projections',
+    xaxis: { title: 'Year' },
+    yaxis: { title: 'Amount (₹ Crore)' },
+    hovermode: 'x unified'
+};
+
+Plotly.newPlot('forecast-chart', traces, layout);
+{% endif %}
+
+// Risk explanation function
+function getRiskExplanation(riskTopic, index) {
+    const explanationDiv = document.getElementById(`risk-explanation-${index}`);
+    explanationDiv.classList.remove('d-none');
+    
+    $.ajax({
+        url: "{% url 'dashboard:risk_explanation' %}",
+        type: 'POST',
+        data: {
+            'risk_topic': riskTopic,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            explanationDiv.innerHTML = `<div class="alert alert-light"><small>${response.explanation}</small></div>`;
+        },
+        error: function() {
+            explanationDiv.innerHTML = `<div class="alert alert-danger"><small>Failed to load explanation.</small></div>`;
+        }
+    });
+}
+
+// Opportunity explanation function
+function getOpportunityExplanation(opportunityTopic, index) {
+    const explanationDiv = document.getElementById(`opportunity-explanation-${index}`);
+    explanationDiv.classList.remove('d-none');
+    
+    $.ajax({
+        url: "{% url 'dashboard:opportunity_explanation' %}",
+        type: 'POST',
+        data: {
+            'opportunity_topic': opportunityTopic,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            explanationDiv.innerHTML = `<div class="alert alert-light"><small>${response.explanation}</small></div>`;
+        },
+        error: function() {
+            explanationDiv.innerHTML = `<div class="alert alert-danger"><small>Failed to load explanation.</small></div>`;
+        }
+    });
+}
+
+
+</script>
+{% endblock %}
